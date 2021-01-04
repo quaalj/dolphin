@@ -640,7 +640,6 @@ void NetPlayDialog::UpdateGUI()
   if (!client)
     return;
 
-  //!!! hook here
   client->checkGolfer();
 
   // Update Player List
