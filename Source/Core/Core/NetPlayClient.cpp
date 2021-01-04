@@ -1314,6 +1314,7 @@ void NetPlayClient::SendAsync(sf::Packet&& packet, const u8 channel_id)
 // called from ---NETPLAY--- thread
 void NetPlayClient::ThreadFunc()
 {
+
   Common::QoSSession qos_session;
   if (Config::Get(Config::NETPLAY_ENABLE_QOS))
   {
@@ -2356,6 +2357,105 @@ void NetPlayClient::ComputeMD5(const SyncIdentifier& sync_identifier)
     packet << sum;
     SendAsync(std::move(packet));
   });
+}
+
+void NetPlayClient::checkGolfer(void)
+{
+
+  #define SMB1_P1_ADDRESS 0x00206BF8
+  #define SMB1_P2_ADDRESS 0x00206C38
+  #define SMB1_P3_ADDRESS 0x00206C78
+  #define SMB1_P4_ADDRESS 0x00206CB8
+
+  #define SMB2_P1_ADDRESS 0x005BC9A0
+  #define SMB2_P2_ADDRESS 0x005bcb50
+  #define SMB2_P3_ADDRESS 0x005BCEB0
+  #define SMB2_P4_ADDRESS 0x005BD060
+
+  #define GAMECODE_ADDRESS 0x00000000
+
+  typedef enum { unknown, SMB1, SMB2 } Game;
+
+  enum Player { NONE, P1 = 1, P2, P3, P4 };
+
+  enum Player activePlayer = NONE;
+  u32 gamecode;
+  Game currGame = unknown;
+  ::AddressSpace::Accessors* accessors = ::AddressSpace::GetAccessors(::AddressSpace::Type::Physical);
+
+  //what game is being played
+  if (accessors->IsValidAddress(GAMECODE_ADDRESS))
+  {
+    gamecode = accessors->ReadU32(GAMECODE_ADDRESS);
+
+    if (gamecode == 0x474d4245)
+    {
+      currGame = SMB1;
+    }
+
+    if (gamecode == 0x474d3245)
+    {
+      currGame = SMB2;
+    }
+  }
+
+  //find out if player is active in memory
+  if (currGame == SMB1)
+  {
+    if (accessors->IsValidAddress(SMB1_P1_ADDRESS) && accessors->ReadU8(SMB1_P1_ADDRESS) == 2)
+    {
+      activePlayer = P1;
+    }
+
+    if (accessors->IsValidAddress(SMB1_P2_ADDRESS) && accessors->ReadU8(SMB1_P2_ADDRESS) == 2)
+    {
+      activePlayer = P2;
+    }
+
+    if (accessors->IsValidAddress(SMB1_P3_ADDRESS) && accessors->ReadU8(SMB1_P3_ADDRESS) == 2)
+    {
+      activePlayer = P3;
+    }
+
+    if (accessors->IsValidAddress(SMB1_P4_ADDRESS) && accessors->ReadU8(SMB1_P4_ADDRESS) == 2)
+    {
+      activePlayer = P4;
+    }
+  }
+
+  if (currGame == SMB2)
+  {
+    if (accessors->IsValidAddress(SMB2_P1_ADDRESS) && accessors->ReadU8(SMB2_P1_ADDRESS) == 2)
+    {
+        activePlayer = P1;
+    }
+
+    if (accessors->IsValidAddress(SMB2_P2_ADDRESS) && accessors->ReadU8(SMB2_P2_ADDRESS) == 2)
+    {
+      activePlayer = P2;
+    }
+
+    if (accessors->IsValidAddress(SMB2_P3_ADDRESS) && accessors->ReadU8(SMB2_P3_ADDRESS) == 2)
+    {
+      activePlayer = P3;
+    }
+
+    if (accessors->IsValidAddress(SMB2_P4_ADDRESS) && accessors->ReadU8(SMB2_P4_ADDRESS) == 2)
+    {
+      activePlayer = P4;
+    }
+  }
+
+  //host to assign current golfer
+  if (m_local_player->IsHost() && (currGame == SMB1 || currGame == SMB2) && activePlayer)
+  {
+    if (activePlayer != m_current_golfer)
+    {
+      RequestGolfControl(activePlayer);
+    }
+  }
+
+  return;
 }
 
 const PadMappingArray& NetPlayClient::GetPadMapping() const

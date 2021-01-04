@@ -517,6 +517,7 @@ void NetPlayDialog::OnStart()
   Settings::Instance().GetNetPlayServer()->SetNetSettings(settings);
   if (Settings::Instance().GetNetPlayServer()->RequestStartGame())
     SetOptionsEnabled(false);
+
 }
 
 void NetPlayDialog::reject()
@@ -638,6 +639,9 @@ void NetPlayDialog::UpdateGUI()
   auto server = Settings::Instance().GetNetPlayServer();
   if (!client)
     return;
+
+  //!!! hook here
+  client->checkGolfer();
 
   // Update Player List
   const auto players = client->GetPlayers();

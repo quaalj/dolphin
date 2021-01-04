@@ -25,6 +25,8 @@
 #include "Core/SyncIdentifier.h"
 #include "InputCommon/GCPadStatus.h"
 
+#include "Core/HW/AddressSpace.h"
+
 namespace UICommon
 {
 class GameFile;
@@ -146,6 +148,8 @@ public:
   void AdjustPadBufferSize(unsigned int size);
 
   static SyncIdentifier GetSDCardIdentifier();
+
+  void checkGolfer(void);
 
 protected:
   struct AsyncQueueEntry
